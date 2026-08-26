@@ -91,22 +91,30 @@ app.get('/api/logs', async (req, res) => {
     res.json({ success: true, logs: logs });
 });
 
-// Determine static dist directory path
-let distPath = path.join(__dirname, 'dashboard', 'dist');
-if (!fs.existsSync(distPath)) {
-    distPath = path.join(__dirname, 'dist');
+// Robust dist path discovery algorithm across all execution environments
+const possibleDistPaths = [
+    path.join(__dirname, 'dashboard', 'dist'),
+    path.join(__dirname, 'dist'),
+    path.join(__dirname, '..', 'dashboard', 'dist'),
+    path.join(__dirname, '..', 'dist'),
+    path.join(process.cwd(), 'dashboard', 'dist'),
+    path.join(process.cwd(), 'dist')
+];
+
+let distPath = possibleDistPaths.find(p => fs.existsSync(p) && fs.existsSync(path.join(p, 'index.html')));
+
+if (distPath) {
+    console.log(`✅ Express static serving frontend from: ${distPath}`);
+    app.use(express.static(distPath));
+    app.get('*', (req, res) => {
+        res.sendFile(path.join(distPath, 'index.html'));
+    });
+} else {
+    console.error('❌ dist path not found among candidates:', possibleDistPaths);
+    app.get('*', (req, res) => {
+        res.status(500).send('Dashboard frontend dist build files missing. Please run build script.');
+    });
 }
-
-app.use(express.static(distPath));
-
-app.get('*', (req, res) => {
-    const indexPath = path.join(distPath, 'index.html');
-    if (fs.existsSync(indexPath)) {
-        res.sendFile(indexPath);
-    } else {
-        res.status(404).send('Dashboard frontend dist files not found');
-    }
-});
 
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
