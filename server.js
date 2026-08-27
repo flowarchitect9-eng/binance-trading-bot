@@ -46,10 +46,9 @@ app.get('*', (req, res) => {
     }
 });
 
-if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
-    app.listen(PORT, () => {
-        console.log(`🌐 Cyberpunk Trading Dashboard listening on port ${PORT}`);
-    });
-}
+// Bind to 0.0.0.0 for Railway & Docker containers
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🌐 Cyberpunk Trading Dashboard listening on 0.0.0.0:${PORT}`);
+});
 
 module.exports = app;
